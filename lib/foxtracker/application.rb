@@ -229,7 +229,7 @@ module Foxtracker
           instrument_args[:volume_fadeout] = bin[offset...(offset += 2)].unpack1("S<")
           instrument_args[:reserved] = bin[offset...(offset += 22)].unpack("S<*")
 
-          puts "in instrument #{instrument_args[:name].inspect}"
+          puts "instrument #{instrument_args[:name].inspect}:"
           offset, instrument_args[:samples] = parse_samples(bin, instrument_args, offset)
         end
       end
@@ -258,7 +258,13 @@ module Foxtracker
 
           sample_args[:name] = bin[offset...(offset += 22)].strip
           sample_args[:raw_data] = bin[offset...(offset += sample_args[:sample_length])]
-          puts "  sample #{sample_args[:name].inspect} has a length of 0x#{sample_args[:sample_length].to_s(16)}"
+          puts "- sample #{sample_args[:name].inspect}:"
+          puts "  - length: #{format('%#06x', sample_args[:sample_length])}"
+          puts "  - loop_start: #{format('%#06x', sample_args[:sample_loop_start])}"
+          puts "  - loop_length: #{format('%#06x', sample_args[:sample_loop_length])}"
+          puts "  - volume: #{format('%#04x', sample_args[:volume])}"
+          puts "  - finetune: #{format('%#04x', sample_args[:finetune])}"
+          puts "  - panning: #{format('%#04x', sample_args[:panning])}"
           sample_args[:data] = unpack_sample_data(sample_args)
         end
       end
