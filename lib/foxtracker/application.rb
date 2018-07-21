@@ -204,12 +204,13 @@ module Foxtracker
       patterns = []
       offset = xm_args[:header_size] + 60
 
-      xm_args[:number_of_patterns].times do
+      xm_args[:number_of_patterns].times do |pattern_no|
         patterns << {}.tap do |pattern_args|
           pattern_args[:header_size] = bin[offset...(offset += 4)].unpack1("L<")
           pattern_args[:packing_type] = bin[offset...(offset += 1)].unpack1("C")
           pattern_args[:number_of_rows] = bin[offset...(offset += 2)].unpack1("S<")
           pattern_args[:packed_size] = bin[offset...(offset += 2)].unpack1("S<")
+          puts "pattern #{pattern_no.to_s(16)}"
           parse_pattern(bin[offset...(offset += pattern_args[:packed_size])], xm_args, pattern_args)
           # offset += pattern_args[:packed_size] # skip for now
         end
@@ -219,10 +220,11 @@ module Foxtracker
     end
 
     def self.parse_pattern(bin, xm_args, pattern_args)
-      pattern = Array.new([], xm_args[:number_of_channels])
+      pattern = Array.new(xm_args[:number_of_channels])
       offset = 0
       pattern_args[:number_of_rows].times do
         xm_args[:number_of_channels].times do |chan|
+          pattern[chan] ||= []
           first_byte = bin[offset...(offset += 1)].unpack1("C")
           note = { note: 0, instrument: 0, volume: 0, effect_type: 0, effect_param: 0 }
           if first_byte & 128 == 128 # packed note
@@ -234,7 +236,7 @@ module Foxtracker
             pattern[chan] << note
             next
           end
-          note[:note]         = bin[offset...(offset += 1)].unpack1("C")
+          note[:note]         = first_byte
           note[:instrument]   = bin[offset...(offset += 1)].unpack1("C")
           note[:volume]       = bin[offset...(offset += 1)].unpack1("C")
           note[:effect_type]  = bin[offset...(offset += 1)].unpack1("C")
@@ -242,7 +244,7 @@ module Foxtracker
           pattern[chan] << note
         end
       end
-      binding.irb
+      puts pattern.transpose.map { |chan| chan.map { |note| "%02d %2x %2x %2x %2x" % [ note[:note], note[:instrument], note[:volume], note[:effect_type], note[:effect_param] ] }.join(" | ") }.join("\n")
       pattern
     end
 
