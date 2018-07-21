@@ -210,11 +210,40 @@ module Foxtracker
           pattern_args[:packing_type] = bin[offset...(offset += 1)].unpack1("C")
           pattern_args[:number_of_rows] = bin[offset...(offset += 2)].unpack1("S<")
           pattern_args[:packed_size] = bin[offset...(offset += 2)].unpack1("S<")
-          offset += pattern_args[:packed_size] # skip for now
+          parse_pattern(bin[offset...(offset += pattern_args[:packed_size])], xm_args, pattern_args)
+          # offset += pattern_args[:packed_size] # skip for now
         end
       end
 
       [offset, patterns]
+    end
+
+    def self.parse_pattern(bin, xm_args, pattern_args)
+      pattern = Array.new([], xm_args[:number_of_channels])
+      offset = 0
+      pattern_args[:number_of_rows].times do
+        xm_args[:number_of_channels].times do |chan|
+          first_byte = bin[offset...(offset += 1)].unpack1("C")
+          note = { note: 0, instrument: 0, volume: 0, effect_type: 0, effect_param: 0 }
+          if first_byte & 128 == 128 # packed note
+            note[:note]         = bin[offset...(offset += 1)].unpack1("C") if first_byte & 1 == 1
+            note[:instrument]   = bin[offset...(offset += 1)].unpack1("C") if first_byte & 2 == 2
+            note[:volume]       = bin[offset...(offset += 1)].unpack1("C") if first_byte & 4 == 4
+            note[:effect_type]  = bin[offset...(offset += 1)].unpack1("C") if first_byte & 8 == 8
+            note[:effect_param] = bin[offset...(offset += 1)].unpack1("C") if first_byte & 16 == 16
+            pattern[chan] << note
+            next
+          end
+          note[:note]         = bin[offset...(offset += 1)].unpack1("C")
+          note[:instrument]   = bin[offset...(offset += 1)].unpack1("C")
+          note[:volume]       = bin[offset...(offset += 1)].unpack1("C")
+          note[:effect_type]  = bin[offset...(offset += 1)].unpack1("C")
+          note[:effect_param] = bin[offset...(offset += 1)].unpack1("C")
+          pattern[chan] << note
+        end
+      end
+      binding.irb
+      pattern
     end
 
     def self.parse_instruments(bin, xm_args, offset)
