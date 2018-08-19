@@ -7,8 +7,9 @@ require "foxtracker/format/extended_module"
 module Foxtracker
   module Parser
     class ExtendedModule < Base
-      def parse(bin)
+      def parse(bin, debug: false)
         bin = -bin
+        @debug = debug
         args = {}
         offset = 0
 
@@ -33,9 +34,11 @@ module Foxtracker
 
         args[:pattern_order] = bin[offset...(offset += args[:song_length])].unpack("C*")
 
-        puts "song #{args[:title].inspect}"
-        puts "tracker #{args[:tracker].inspect} (#{format('%#06x', args[:version_number])})"
-        puts "-" * 25
+        if @debug
+          puts "song #{args[:title].inspect}"
+          puts "tracker #{args[:tracker].inspect} (#{format('%#06x', args[:version_number])})"
+          puts "-" * 25
+        end
 
         ############
         # patterns #
@@ -62,7 +65,7 @@ module Foxtracker
             pattern_args[:packing_type] = bin[offset...(offset += 1)].unpack1("C")
             pattern_args[:number_of_rows] = bin[offset...(offset += 2)].unpack1("S<")
             pattern_args[:packed_size] = bin[offset...(offset += 2)].unpack1("S<")
-            puts "pattern #{pattern_no.to_s(16)}"
+            puts "pattern #{pattern_no.to_s(16)}" if @debug
             pattern_args[:channels] = parse_pattern(
               bin[offset...(offset += pattern_args[:packed_size])], xm_args, pattern_args
             )
@@ -98,7 +101,7 @@ module Foxtracker
             pattern[chan] << note
           end
         end
-        puts pattern.transpose.map { |chan| chan.map { |note| format("%02d %2x %2x %2x %2x", note[:note], note[:instrument], note[:volume], note[:effect_type], note[:effect_param]) }.join(" | ") }.join("\n")
+        puts pattern.transpose.map { |chan| chan.map { |note| format("%02d %2x %2x %2x %2x", note[:note], note[:instrument], note[:volume], note[:effect_type], note[:effect_param]) }.join(" | ") }.join("\n") if @debug
         pattern
       end
 
@@ -113,9 +116,11 @@ module Foxtracker
             instrument_args[:type] = bin[offset...(offset += 1)].unpack1("C")
             instrument_args[:number_of_samples] = bin[offset...(offset += 2)].unpack1("S<")
 
-            puts "instrument #{instrument_args[:name].inspect}:"
-            puts "- header_size: #{format('%#06x', instrument_args[:header_size])}"
-            puts "- number_of_samples: #{instrument_args[:number_of_samples]}"
+            if @debug
+              puts "instrument #{instrument_args[:name].inspect}:"
+              puts "- header_size: #{format('%#06x', instrument_args[:header_size])}"
+              puts "- number_of_samples: #{instrument_args[:number_of_samples]}"
+            end
             if instrument_args[:number_of_samples].zero?
               offset -= 33 # realignment hack from xmp
               next
@@ -123,7 +128,7 @@ module Foxtracker
 
             # 2nd part
             instrument_args[:sample_header_size] = bin[offset...(offset += 4)].unpack1("L<")
-            puts "- sample_header_size: #{format('%#06x', instrument_args[:sample_header_size])}"
+            puts "- sample_header_size: #{format('%#06x', instrument_args[:sample_header_size])}" if @debug
             instrument_args[:sample_keymap_assignments] = bin[offset...(offset += 96)].unpack("C*")
             instrument_args[:volume_envelope] = bin[offset...(offset += 48)].unpack("S<*")
             instrument_args[:panning_envelope] = bin[offset...(offset += 48)].unpack("S<*")
@@ -134,13 +139,15 @@ module Foxtracker
                volume_type panning_type
                vibrato_type vibrato_sweep vibrato_depth vibrato_rate].each do |attr|
               instrument_args[attr] = bin[offset...(offset += 1)].unpack1("C")
-              print "- #{attr}: #{format('%#04x', instrument_args[attr])} -- "
-              p instrument_args[attr]
+              if @debug
+                print "- #{attr}: #{format('%#04x', instrument_args[attr])} -- "
+                p instrument_args[attr]
+              end
             end
 
             instrument_args[:volume_fadeout] = bin[offset...(offset += 2)].unpack1("S<")
             instrument_args[:reserved] = bin[offset...(offset += 22)].unpack("S<*")
-            puts "- volume_fadeout: #{format('%#06x', instrument_args[:volume_fadeout])}"
+            puts "- volume_fadeout: #{format('%#06x', instrument_args[:volume_fadeout])}" if @debug
 
             offset, instrument_args[:samples] = parse_samples(bin, instrument_args, offset)
           end
@@ -153,7 +160,7 @@ module Foxtracker
         samples = []
 
         # first the sample headers ...
-        puts "- samples:"
+        puts "- samples:" if @debug
         instrument_args[:number_of_samples].times do
           samples << {}.tap do |sample_args|
             start_offset = offset
@@ -169,16 +176,18 @@ module Foxtracker
             sample_args[:packing_type] = bin[offset...(offset += 1)].unpack1("C")
 
             sample_args[:name] = bin[offset...(offset += 22)].rstrip
-            puts "  - name: #{sample_args[:name].inspect}"
-            puts "    type: #{Support::ExtendedModule.sample_type(sample_args[:type])}bit"
-            puts "    length: #{format('%#06x', sample_args[:sample_length])}"
-            puts "    loop_start: #{format('%#06x', sample_args[:sample_loop_start])}"
-            puts "    loop_length: #{format('%#06x', sample_args[:sample_loop_length])}"
-            puts "    volume: #{format('%#04x', sample_args[:volume])}"
-            puts "    finetune: #{format('%#04x', sample_args[:finetune])}"
-            puts "    panning: #{format('%#04x', sample_args[:panning])}"
+            if @debug
+              puts "  - name: #{sample_args[:name].inspect}"
+              puts "    type: #{Support::ExtendedModule.sample_type(sample_args[:type])}bit"
+              puts "    length: #{format('%#06x', sample_args[:sample_length])}"
+              puts "    loop_start: #{format('%#06x', sample_args[:sample_loop_start])}"
+              puts "    loop_length: #{format('%#06x', sample_args[:sample_loop_length])}"
+              puts "    volume: #{format('%#04x', sample_args[:volume])}"
+              puts "    finetune: #{format('%#04x', sample_args[:finetune])}"
+              puts "    panning: #{format('%#04x', sample_args[:panning])}"
+            end
             diff = instrument_args[:sample_header_size] - (offset - start_offset)
-            puts "    offset diff from instrument header: #{diff}"
+            puts "    offset diff from instrument header: #{diff}" if @debug
             raise unless diff.zero?
           end
         end
@@ -193,7 +202,7 @@ module Foxtracker
       end
 
       def unpack_sample_data(sample_args)
-        puts "unpacking sample #{sample_args[:name].inspect} ..."
+        puts "unpacking sample #{sample_args[:name].inspect} ..." if @debug
         unpack_str = case Support::ExtendedModule.sample_type(sample_args[:type])
                      when 8 then "c*"
                      when 16 then "s<*"

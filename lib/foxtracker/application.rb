@@ -12,7 +12,7 @@ module Foxtracker
     end
 
     def run
-      xm = Foxtracker::Parser.read(@filename)
+      xm = Foxtracker::Parser.read(@filename, debug: true)
       require "pp"
       pp xm
     ensure

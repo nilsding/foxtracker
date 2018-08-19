@@ -6,12 +6,12 @@ module Foxtracker
   module Parser
     module_function
 
-    def read(filename)
-      parse IO.binread(filename)
+    def read(filename, debug: false)
+      parse IO.binread(filename), debug: debug
     end
 
-    def parse(bin)
-      ExtendedModule.parse(bin)
+    def parse(bin, debug: false)
+      ExtendedModule.parse(bin, debug: debug)
     end
   end
 end
