@@ -60,11 +60,21 @@ module Foxtracker
     attribute :default_bpm, Types::Strict::Integer
     attribute :pattern_order, Types::Strict::Array.of(Types::Strict::Integer)
 
+    class Note < Dry::Struct
+      attribute :note, Types::Strict::Integer
+      attribute :instrument, Types::Strict::Integer
+      attribute :volume, Types::Strict::Integer
+      attribute :effect_type, Types::Strict::Integer
+      attribute :effect_param, Types::Strict::Integer
+    end
+
     class Pattern < Dry::Struct
       attribute :header_size, Types::Strict::Integer
       attribute :packing_type, Types::Strict::Integer
       attribute :number_of_rows, Types::Strict::Integer.constrained(min_size: 1, max_size: 256)
       attribute :packed_size, Types::Strict::Integer
+
+      attribute :channels, Types::Strict::Array.of(Types::Strict::Array.of(Note))
     end
 
     attribute :patterns, Types::Strict::Array.of(Pattern)
@@ -211,7 +221,9 @@ module Foxtracker
           pattern_args[:number_of_rows] = bin[offset...(offset += 2)].unpack1("S<")
           pattern_args[:packed_size] = bin[offset...(offset += 2)].unpack1("S<")
           puts "pattern #{pattern_no.to_s(16)}"
-          parse_pattern(bin[offset...(offset += pattern_args[:packed_size])], xm_args, pattern_args)
+          pattern_args[:channels] = parse_pattern(
+            bin[offset...(offset += pattern_args[:packed_size])], xm_args, pattern_args
+          )
           # offset += pattern_args[:packed_size] # skip for now
         end
       end
