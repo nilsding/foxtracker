@@ -1,8 +1,7 @@
 # Foxtracker
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/foxtracker`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Foxtracker is a parser for tracker music formats.  Right now it only supports XM
+(FastTracker II) modules.  Support for more formats is to be done.
 
 ## Installation
 
@@ -22,7 +21,24 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+require "foxtracker/parser"
+
+xm = Foxtracker::Parser.read(
+  # path to xm file:
+  File.expand_path("./siuperdu[perxmldsosnmg v2.xm", __dir__),
+  # display debug output during parsing (default false)
+  debug: true
+)
+#=> #<Foxtracker::Format::ExtendedModule title="superdupersongxmldng" tracker="MilkyTracker 1.00.00" ...>
+
+xm
+  .patterns.first # the pattern 0
+  .channels.first # the first channel
+  .first          # the first row/note for the channel
+  .note           #=> 85 (C-7); the note value
+
+```
 
 ## Development
 

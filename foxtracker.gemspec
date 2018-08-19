@@ -10,8 +10,8 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Georg Gadinger"]
   spec.email         = ["nilsding@nilsding.org"]
 
-  spec.summary       = "a CLI-based music tracker"
-  spec.description   = "FoxTracker is a CLI-based music tracker"
+  spec.summary       = "a parser for tracker music formats"
+  spec.description   = "Foxtracker is a parser for tracker music formats.  Right now it only supports XM (FastTracker II) modules.  Support for more formats is to be done."
   spec.homepage      = "https://github.com/nilsding/foxtracker"
   spec.license       = "MIT"
 
