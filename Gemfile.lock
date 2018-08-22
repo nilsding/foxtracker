@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    foxtracker (0.1.0)
+    foxtracker (0.1.0.pre1337)
       dry-struct (~> 0.5)
 
 GEM
@@ -23,7 +23,7 @@ GEM
       dry-container (~> 0.2, >= 0.2.6)
       dry-core (~> 0.2)
       dry-equalizer (~> 0.2)
-    dry-struct (0.5.0)
+    dry-struct (0.5.1)
       dry-core (~> 0.4, >= 0.4.3)
       dry-equalizer (~> 0.2)
       dry-types (~> 0.13)
@@ -81,4 +81,4 @@ DEPENDENCIES
   rubocop (~> 0.58)
 
 BUNDLED WITH
-   1.16.2
+   1.16.3

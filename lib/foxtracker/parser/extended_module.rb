@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "foxtracker/errors"
 require "foxtracker/parser/base"
 require "foxtracker/parser/support/extended_module"
 require "foxtracker/format/extended_module"
@@ -16,10 +17,10 @@ module Foxtracker
         ##########
         # header #
         ##########
-        raise "not an XM module" unless bin[offset...(offset += 17)].casecmp("Extended module: ").zero?
+        raise Errors::WrongFormat.new("not an XM module") unless bin[offset...(offset += 17)].casecmp("Extended module: ").zero?
 
         args[:title] = bin[offset...(offset += 20)].rstrip
-        raise "invalid XM module" unless bin[offset...(offset += 1)] == "\x1A"
+        raise Errors::InvalidModule.new("invalid XM module") unless bin[offset...(offset += 1)] == "\x1A"
 
         args[:tracker] = bin[offset...(offset += 20)].rstrip
 
@@ -188,7 +189,7 @@ module Foxtracker
             end
             diff = instrument_args[:sample_header_size] - (offset - start_offset)
             puts "    offset diff from instrument header: #{diff}" if @debug
-            raise unless diff.zero?
+            raise Errors::InvalidModule.new("sample header offsets do not match (got #{diff} instead of 0)") unless diff.zero?
           end
         end
 
@@ -207,11 +208,11 @@ module Foxtracker
                      when 8 then "c*"
                      when 16 then "s<*"
                      else
-                       raise "this should never happen(tm)"
+                       raise ArgumentError.new("this state should never be reached")
                      end
         packed_samples = sample_args.delete(:raw_data).unpack(unpack_str)
 
-        raise "ADPCM samples are not supported yet" if sample_args[:packing_type] == 0xAD
+        raise NotImplementedError.new("ADPCM samples are not supported yet") if sample_args[:packing_type] == 0xAD
 
         # delta compression
         [].tap do |samples|
