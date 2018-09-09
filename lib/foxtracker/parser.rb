@@ -3,6 +3,7 @@
 require "foxtracker/errors"
 require "foxtracker/parser/base"
 require "foxtracker/parser/extended_module"
+require "foxtracker/parser/symphonie_module"
 
 module Foxtracker
   module Parser
