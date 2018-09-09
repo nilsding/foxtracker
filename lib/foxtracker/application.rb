@@ -15,6 +15,8 @@ module Foxtracker
       xm = Foxtracker::Parser.read(@filename, debug: true)
       require "pp"
       pp xm
+    rescue => e
+      raise
     ensure
       binding.irb
     end
