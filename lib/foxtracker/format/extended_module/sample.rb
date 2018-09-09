@@ -3,11 +3,14 @@
 require "dry-struct"
 
 require "foxtracker/types"
+require "foxtracker/format/support/dry_types_unspect"
 
 module Foxtracker
   module Format
     class ExtendedModule < Dry::Struct
       class Sample < Dry::Struct
+        include Foxtracker::Format::Support::DryTypesUnspect.new(:data)
+
         attribute :sample_length, Types::Strict::Integer
         attribute :sample_loop_start, Types::Strict::Integer
         attribute :sample_loop_length, Types::Strict::Integer
@@ -36,18 +39,6 @@ module Foxtracker
         # returns if this sample is to be looped
         def looping?
           !sample_loop_length.zero?
-        end
-
-        # HACK: to remove :data from inspect output as sample data is really too spammy
-        # https://github.com/dry-rb/dry-struct/blob/cb41a5a03/lib/dry/struct.rb#L178
-        def inspect
-          klass = self.class
-          attrs = klass
-                  .attribute_names
-                  .reject { |key| key == :data }
-                  .map { |key| " #{key}=#{@attributes[key].inspect}" }
-                  .join
-          "#<#{klass.name || klass.inspect}#{attrs}>"
         end
       end
     end
