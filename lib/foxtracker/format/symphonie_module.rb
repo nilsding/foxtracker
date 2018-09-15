@@ -3,6 +3,7 @@
 require "dry-struct"
 
 require "foxtracker/types"
+require "foxtracker/format/symphonie_module/pattern"
 require "foxtracker/format/symphonie_module/instrument"
 
 module Foxtracker
@@ -16,6 +17,7 @@ module Foxtracker
 
       attribute :info_text, Types::Strict::String
 
+      attribute :patterns, Types::Strict::Array.of(Pattern)
       attribute :instruments, Types::Strict::Array.of(Instrument)
     end
   end

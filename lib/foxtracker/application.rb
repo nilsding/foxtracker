@@ -12,10 +12,9 @@ module Foxtracker
     end
 
     def run
-      xm = Foxtracker::Parser.read(@filename, debug: true)
-      require "pp"
-      pp xm
-    rescue => e
+      mod = Foxtracker::Parser.read(@filename, debug: true)
+      puts "Parsing successful.  Now play with it!"
+    rescue StandardError => e
       raise
     ensure
       binding.irb

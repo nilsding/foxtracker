@@ -23,9 +23,11 @@ module Foxtracker
         args[:version_number] = bin[offset...(offset += 4)].unpack1("l>")
         raise Errors::InvalidModule.new("SymMOD version is not 1") unless args[:version_number] == 1
 
+        puts ">> phase 1: parsing the whole file" if @debug
         parse_modheads(bin, args, offset)
 
-        binding.irb
+        puts ">> phase 2: parsing the patterns" if @debug
+        parse_patterns(args)
 
         Format::SymphonieModule.new(args)
       end
@@ -38,9 +40,9 @@ module Foxtracker
       # `ExtractModuleParts_JL` and `LoadModuleParts_JL`
       MODHEAD_TYPES = {
         # these types are followed by a long with the value
-        -1 => %i[long number_of_channels], 
+        -1 => %i[long number_of_channels],
         -2 => %i[long number_of_rows], # Symphonie calls it "track length"
-        -3 => %i[long number_of_patterns],
+        -3 => %i[patternnumb number_of_patterns],
         -4 => %i[long number_of_instruments],
         -5 => %i[long notesize],
         -6 => %i[long system_speed],
@@ -92,19 +94,24 @@ module Foxtracker
         offset
       end
 
+      def parse_modhead_patternnumb(bin, _modhead_name, args, offset)
+        value = bin[offset...(offset += 4)].unpack1("l>")
+
+        number_of_positions = value & 0xffff
+        number_of_patterns = (value >> 16) & 0xffff
+        puts " # => positions: #{number_of_positions.inspect}, patterns: #{number_of_patterns}" if @debug
+        args[:number_of_positions] = number_of_positions
+        args[:number_of_patterns]  = number_of_patterns
+
+        offset
+      end
+
       def parse_modhead_block(bin, modhead_name, args, offset)
         length = bin[offset...(offset += 4)].unpack1("l>")
 
-        # skip lol
         data = bin[offset...(offset += length)]
-        case modhead_name
-        when :info_text
-          args[modhead_name] = data
-          puts " # => #{data.size} bytes"
-        else
-          args[modhead_name] = data
-          puts " # => skip #{length} bytes" if @debug
-        end
+        args[modhead_name] = data
+        puts " # => #{data.size} bytes" if @debug
 
         offset
       end
@@ -208,6 +215,105 @@ module Foxtracker
 
       def parse_modhead_delta_16_sample(bin, modhead_name, args, offset)
         parse_modhead_sample(bin, modhead_name, args, offset, delta_extract: true, delta_type: 16)
+      end
+
+      def parse_patterns(args)
+        args[:patterns] = [].tap do |patterns|
+          args[:note_data]
+            .unpack("C*").each_slice(args[:number_of_channels] * 4 * args[:number_of_rows]).with_index do |raw_pattern, i|
+            puts "parsing pattern #{i}" if @debug
+            patterns << parse_pattern(raw_pattern, args)
+          end
+        end
+      end
+
+      # assembly: FX_* constants
+      NOTE_FX = {
+        1  => :volumeslideup,
+        2  => :volumeslidedown,
+        3  => :pitchslideup,
+        4  => :pitchslidedown,
+        5  => :replayfrom,
+        6  => :fromandpitch,
+        7  => :setfromadd,
+        8  => :fromadd,
+        9  => :setspeed,
+        10 => :addpitch,
+        11 => :addvolume,
+        12 => :vibrato,
+        13 => :tremolo,
+        14 => :samplevib,
+        15 => :pslideto,
+        16 => :retrig,
+        17 => :emphasis,
+        18 => :addhalvtone,
+        19 => :cv,
+        20 => :cvadd,
+        23 => :filter,
+
+        24 => :dspecho,
+        25 => :dspdelay,
+        26 => :dspchor, # N.B: unused?  source defines FX_MAX as 25 (dspdelay)
+      }.freeze
+
+      # assembly: VOLUME_* constants
+      VOLUME_FX = {
+        254 => :stopsample,
+        253 => :contsample,
+        252 => :startsample,
+        251 => :keyoff,
+        250 => :speeddown,
+        249 => :speedup,
+        248 => :setpitch,
+        247 => :pitchup,
+        246 => :pitchdown,
+        245 => :pitchup2,
+        244 => :pitchdown2,
+        243 => :pitchup3,
+        242 => :pitchdown3,
+
+        0   => :none,
+        1   => :min,
+        100 => :max,
+        200 => :command
+      }.freeze
+
+      # assembly: NOTETYPEID_* constants
+      NOTE_TYPES = {
+        0 => :none,
+        1 => :noteon,
+        2 => :simple_fx,
+        3 => :complex_fx
+      }.freeze
+
+      NOTE_EMPTY = [0, 255, 0, 0].freeze
+      private_constant :NOTE_FX, :VOLUME_FX, :NOTE_EMPTY
+
+      def parse_pattern(raw_pattern, args)
+        {
+          channels:
+            raw_pattern
+              .each_slice(args[:number_of_channels] * 4)
+              .map { |x| x.each_slice(4).to_a }
+              .transpose
+              .map { |channel| channel.map(&method(:parse_note)) }
+        }
+      end
+
+      def parse_note(raw_note)
+        # assembly: ConvertNote and its relatives
+        {
+          type: NOTE_TYPES[raw_note[0]] || raw_note[0],
+          note: raw_note[1],
+          volume: raw_note[2],
+          instrument: raw_note[3],
+          volume_fx: nil,
+          note_fx: nil
+        }.tap do |n|
+          n[:empty?] = NOTE_EMPTY == raw_note
+          n[:volume_fx] = VOLUME_FX[raw_note[2]] if raw_note[2] >= 200
+          n[:note_fx] = NOTE_FX[raw_note[0]] if (1..25).cover?(raw_note[0])
+        end
       end
     end
   end
