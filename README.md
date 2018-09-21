@@ -2,8 +2,13 @@
 
 [![Gem Version](https://badge.fury.io/rb/foxtracker.svg)](https://badge.fury.io/rb/foxtracker)
 
-Foxtracker is a parser for tracker music formats.  Right now it only supports XM
-(FastTracker II) modules.  Support for more formats is to be done.
+Foxtracker is a parser for tracker music formats.  It currently supports the
+following formats:
+
+- FastTracker II `.xm`
+- Symphonie Pro `.SymMOD`
+
+Support for more formats is to be done.
 
 ## Installation
 
